@@ -234,9 +234,63 @@
     width: 15px; height: 15px; border-radius: 5px;
     border: 2px solid var(--teal);
     flex-shrink: 0;
+    cursor: pointer;
   }
   .check.done { background: var(--sage); border-color: var(--sage); }
   li.done-text { text-decoration: line-through; color: var(--ink-soft); }
+  li.item-text { flex: 1; cursor: pointer; }
+  li.item-text.done { text-decoration: line-through; color: var(--ink-soft); }
+  .item-delete {
+    background: none; border: none; color: var(--ink-soft);
+    font-size: 15px; cursor: pointer; padding: 0 4px; flex-shrink: 0;
+    opacity: 0.55;
+  }
+  .item-delete:active { opacity: 1; }
+  .empty-hint { font-size: 12.5px; color: var(--ink-soft); padding: 8px 0; font-style: italic; }
+
+  .add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-shrink: 0;
+  }
+  .add-row input {
+    flex: 1;
+    padding: 8px 11px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 13.5px;
+    font-family: 'Inter', sans-serif;
+  }
+  .add-row input:focus { outline: 2px solid var(--teal); }
+  .add-btn {
+    width: 34px; flex-shrink: 0;
+    border: none; border-radius: 9px;
+    background: var(--teal); color: var(--paper);
+    font-size: 17px; font-weight: 600;
+    cursor: pointer;
+  }
+  .add-btn:active { opacity: 0.8; }
+
+  .shop-category { margin-bottom: 10px; }
+  .shop-category:last-child { margin-bottom: 0; }
+  .shop-cat-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 3px;
+  }
+  .shop-cat-head h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--teal-dark);
+  }
+  .shop-cat-count {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+  }
 
   /* Recipes */
   .recipe-chip {
@@ -256,6 +310,78 @@
     font-size: 10.5px;
     color: #6B7078;
     letter-spacing: 0.3px;
+  }
+
+  /* ADD EVENT MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 16px;
+    padding: 24px 26px;
+    width: 320px;
+    max-width: 90vw;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  }
+  .modal-box h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: var(--ink);
+  }
+  .modal-box label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink-soft);
+    margin: 12px 0 5px;
+  }
+  .modal-box input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+  }
+  .modal-box input:focus {
+    outline: 2px solid var(--teal);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .modal-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .modal-btn.cancel {
+    background: var(--card-dim);
+    color: var(--ink-soft);
+  }
+  .modal-btn.confirm {
+    background: var(--teal);
+    color: var(--paper);
   }
 </style>
 </head>
@@ -321,52 +447,55 @@
         <div class="cal-item"><span class="cal-time">Thu</span><span>Website draft due</span></div>
       </div>
       <div style="margin-top:8px; flex-shrink:0;">
-        <span class="recipe-chip" id="cal-add-btn" onclick="addCalendarEvent()" style="cursor:pointer; display:none;">+ Add event</span>
+        <span class="recipe-chip" id="cal-add-btn" onclick="openEventModal()" style="cursor:pointer; display:none;">+ Add event</span>
       </div>
     </div>
 
     <!-- TASKS -->
     <div class="card">
-      <div class="card-head"><h2>Tasks</h2><span class="tag">4 open</span></div>
-      <div class="card-body">
-        <ul class="plain">
-          <li><span class="check"></span> Finish PMO audit outline</li>
-          <li><span class="check"></span> Send invoice — CB Pinestraw</li>
-          <li><span class="check done"></span> <span class="done-text">Book dentist appt</span></li>
-          <li><span class="check"></span> Prep Friday client deck</li>
-        </ul>
+      <div class="card-head"><h2>Tasks</h2><span class="tag" id="tasks-count-tag">0 open</span></div>
+      <div class="card-body" id="tasks-body"></div>
+      <div class="add-row">
+        <input type="text" id="tasks-add-input" placeholder="Add a task…" onkeydown="if(event.key==='Enter') addListItem('tasks')">
+        <button class="add-btn" onclick="addListItem('tasks')">+</button>
       </div>
     </div>
 
-    <!-- GROCERY LIST -->
+    <!-- SHOPPING LIST -->
     <div class="card">
-      <div class="card-head"><h2>Grocery List</h2><span class="tag">6 items</span></div>
-      <div class="card-body">
-        <ul class="plain">
-          <li><span class="check"></span> Chicken thighs</li>
-          <li><span class="check"></span> Bell peppers</li>
-          <li><span class="check"></span> Greek yogurt</li>
-          <li><span class="check done"></span> <span class="done-text">Eggs</span></li>
-          <li><span class="check"></span> Tortillas</li>
-          <li><span class="check"></span> Honey</li>
-        </ul>
-      </div>
+      <div class="card-head"><h2>Shopping List</h2><span class="tag" id="shopping-count-tag">0 items</span></div>
+      <div class="card-body" id="shopping-body"></div>
     </div>
 
     <!-- REMINDERS -->
     <div class="card">
-      <div class="card-head"><h2>Reminders</h2><span class="tag">Today</span></div>
-      <div class="card-body">
-        <ul class="plain">
-          <li><span class="check"></span> Take chicken out to thaw</li>
-          <li><span class="check"></span> Water the plants</li>
-          <li><span class="check"></span> Charge the iPad tonight</li>
-        </ul>
+      <div class="card-head"><h2>Reminders</h2><span class="tag" id="reminders-count-tag">0</span></div>
+      <div class="card-body" id="reminders-body"></div>
+      <div class="add-row">
+        <input type="text" id="reminders-add-input" placeholder="Add a reminder…" onkeydown="if(event.key==='Enter') addListItem('reminders')">
+        <button class="add-btn" onclick="addListItem('reminders')">+</button>
       </div>
     </div>
 
   </div>
   <div class="footer-hint">Auto-refreshes • configure NutriSync sheet in dashboard-config.js</div>
+</div>
+
+<!-- ADD EVENT MODAL -->
+<div class="modal-overlay" id="event-modal-overlay">
+  <div class="modal-box">
+    <h3>Add Event</h3>
+    <label>Title</label>
+    <input type="text" id="event-title-input" placeholder="e.g. Dentist appointment">
+    <label>Date</label>
+    <input type="date" id="event-date-input">
+    <label>Time</label>
+    <input type="time" id="event-time-input">
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeEventModal()">Cancel</button>
+      <button class="modal-btn confirm" onclick="submitCalendarEvent()">Add</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -480,17 +609,176 @@
   loadMeals();
   setInterval(loadMeals, 30 * 60 * 1000); // refresh every 30 min
 
-  // ---- Google Calendar two-way sync ----
+  // ---- Interactive lists: Tasks, Reminders, Shopping List ----
+  // Backed by Google Tasks — each card/category maps to its own Google Tasks list,
+  // auto-created on first sign-in. Requires the same Google sign-in as Calendar.
+  const TASK_LIST_TITLES = {
+    "tasks": "Home Hub — Tasks",
+    "reminders": "Home Hub — Reminders",
+    "shopping-groceries": "Home Hub — Groceries",
+    "shopping-personalcare": "Home Hub — Personal Care",
+    "shopping-household": "Home Hub — Household",
+  };
+  let taskListIds = {}; // internal listId -> Google Tasks tasklist id
+  let listsReady = false;
+
+  function authHeader() {
+    return { Authorization: `Bearer ${googleAccessToken}` };
+  }
+
+  async function ensureTaskLists() {
+    const res = await fetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists", { headers: authHeader() });
+    const data = await res.json();
+    const existing = data.items || [];
+    for (const [key, title] of Object.entries(TASK_LIST_TITLES)) {
+      let match = existing.find(l => l.title === title);
+      if (!match) {
+        const createRes = await fetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists", {
+          method: "POST",
+          headers: { ...authHeader(), "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
+        match = await createRes.json();
+      }
+      taskListIds[key] = match.id;
+    }
+    listsReady = true;
+  }
+
+  async function fetchTasks(listId) {
+    const glId = taskListIds[listId];
+    if (!glId) return [];
+    const res = await fetch(
+      `https://tasks.googleapis.com/tasks/v1/lists/${glId}/tasks?showCompleted=true&showHidden=true`,
+      { headers: authHeader() }
+    );
+    const data = await res.json();
+    return (data.items || [])
+      .map(t => ({ id: t.id, text: t.title, done: t.status === "completed" }))
+      .sort((a, b) => a.done - b.done);
+  }
+
+  window.addListItem = async function(listId) {
+    if (!listsReady) return;
+    const input = document.getElementById(`${listId}-add-input`);
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    const glId = taskListIds[listId];
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${glId}/tasks`, {
+      method: "POST",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: text }),
+    });
+    renderAllLists();
+  };
+
+  window.toggleListItem = async function(listId, taskId, currentlyDone) {
+    if (!listsReady) return;
+    const glId = taskListIds[listId];
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${glId}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: currentlyDone ? "needsAction" : "completed" }),
+    });
+    renderAllLists();
+  };
+
+  window.deleteListItem = async function(listId, taskId) {
+    if (!listsReady) return;
+    const glId = taskListIds[listId];
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${glId}/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: authHeader(),
+    });
+    renderAllLists();
+  };
+
+  function notSignedInHtml() {
+    return `<div class="empty-hint">Sign in with Google (Calendar card) to load this list.</div>`;
+  }
+
+  async function renderSimpleList(listId, bodyId, tagId, tagLabelFn) {
+    const body = document.getElementById(bodyId);
+    if (!listsReady) { body.innerHTML = notSignedInHtml(); return; }
+    const items = await fetchTasks(listId);
+    if (items.length === 0) {
+      body.innerHTML = `<div class="empty-hint">Nothing here yet — add one below.</div>`;
+    } else {
+      body.innerHTML = `<ul class="plain">${items.map(i => `
+        <li>
+          <span class="check ${i.done ? "done" : ""}" onclick="toggleListItem('${listId}','${i.id}',${i.done})"></span>
+          <span class="item-text ${i.done ? "done" : ""}" onclick="toggleListItem('${listId}','${i.id}',${i.done})">${i.text}</span>
+          <button class="item-delete" onclick="deleteListItem('${listId}','${i.id}')">×</button>
+        </li>
+      `).join("")}</ul>`;
+    }
+    const openCount = items.filter(i => !i.done).length;
+    document.getElementById(tagId).textContent = tagLabelFn(openCount, items.length);
+  }
+
+  const SHOPPING_CATEGORIES = [
+    { id: "shopping-groceries", label: "Groceries" },
+    { id: "shopping-personalcare", label: "Personal Care" },
+    { id: "shopping-household", label: "Household" },
+  ];
+
+  async function renderShoppingList() {
+    const body = document.getElementById('shopping-body');
+    if (!listsReady) { body.innerHTML = notSignedInHtml(); return; }
+
+    let totalOpen = 0, totalItems = 0;
+    const sections = [];
+    for (const cat of SHOPPING_CATEGORIES) {
+      const items = await fetchTasks(cat.id);
+      totalItems += items.length;
+      totalOpen += items.filter(i => !i.done).length;
+      const listHtml = items.length === 0
+        ? `<div class="empty-hint">Nothing here yet.</div>`
+        : `<ul class="plain">${items.map(i => `
+            <li>
+              <span class="check ${i.done ? "done" : ""}" onclick="toggleListItem('${cat.id}','${i.id}',${i.done})"></span>
+              <span class="item-text ${i.done ? "done" : ""}" onclick="toggleListItem('${cat.id}','${i.id}',${i.done})">${i.text}</span>
+              <button class="item-delete" onclick="deleteListItem('${cat.id}','${i.id}')">×</button>
+            </li>
+          `).join("")}</ul>`;
+      sections.push(`
+        <div class="shop-category">
+          <div class="shop-cat-head">
+            <h3>${cat.label}</h3>
+            <span class="shop-cat-count">${items.filter(i => !i.done).length}/${items.length}</span>
+          </div>
+          ${listHtml}
+          <div class="add-row">
+            <input type="text" id="${cat.id}-add-input" placeholder="Add to ${cat.label.toLowerCase()}…" onkeydown="if(event.key==='Enter') addListItem('${cat.id}')">
+            <button class="add-btn" onclick="addListItem('${cat.id}')">+</button>
+          </div>
+        </div>
+      `);
+    }
+    body.innerHTML = sections.join("");
+    document.getElementById('shopping-count-tag').textContent = `${totalOpen}/${totalItems} items`;
+  }
+
+  function renderAllLists() {
+    renderSimpleList('tasks', 'tasks-body', 'tasks-count-tag', (open) => `${open} open`);
+    renderSimpleList('reminders', 'reminders-body', 'reminders-count-tag', (open) => `${open} open`);
+    renderShoppingList();
+  }
+
+  renderAllLists(); // shows "sign in" hints until Google auth completes
+
+  // ---- Google Calendar + Tasks two-way sync ----
   const GOOGLE_CLIENT_ID = "773299217986-g2n2oq49v99currf80ag0ks7bmbt41rq.apps.googleusercontent.com";
-  const CAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+  const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks";
   let googleAccessToken = null;
   let tokenClient = null;
 
   function initGoogleAuth() {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
-      scope: CAL_SCOPE,
-      callback: (response) => {
+      scope: GOOGLE_SCOPES,
+      callback: async (response) => {
         if (response.error) {
           console.warn("Google auth error:", response.error);
           return;
@@ -501,6 +789,8 @@
         document.getElementById('cal-signin-btn').textContent = "Synced";
         document.getElementById('cal-add-btn').style.display = "inline-block";
         loadCalendarEvents();
+        await ensureTaskLists();
+        renderAllLists();
       },
     });
   }
@@ -554,14 +844,31 @@
     `).join("");
   }
 
-  window.addCalendarEvent = function() {
+  window.openEventModal = function() {
     if (!googleAccessToken) return;
-    const title = prompt("Event title:");
-    if (!title) return;
-    const dateStr = prompt("Date & time (e.g. 2026-09-02 3:00 PM):");
-    if (!dateStr) return;
-    const start = new Date(dateStr);
-    if (isNaN(start)) { alert("Couldn't understand that date/time — try again."); return; }
+    document.getElementById('event-title-input').value = "";
+    // default to today's date and next upcoming hour as a sensible starting point
+    const now = new Date();
+    document.getElementById('event-date-input').value = now.toISOString().slice(0, 10);
+    const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+    nextHour.setMinutes(0);
+    document.getElementById('event-time-input').value = nextHour.toTimeString().slice(0, 5);
+    document.getElementById('event-modal-overlay').classList.add('open');
+  };
+
+  window.closeEventModal = function() {
+    document.getElementById('event-modal-overlay').classList.remove('open');
+  };
+
+  window.submitCalendarEvent = function() {
+    const title = document.getElementById('event-title-input').value.trim();
+    const dateVal = document.getElementById('event-date-input').value;
+    const timeVal = document.getElementById('event-time-input').value;
+    if (!title || !dateVal || !timeVal) {
+      alert("Please fill in a title, date, and time.");
+      return;
+    }
+    const start = new Date(`${dateVal}T${timeVal}`);
     const end = new Date(start.getTime() + 60 * 60 * 1000); // default 1hr
 
     fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
@@ -577,7 +884,10 @@
       }),
     })
       .then(res => res.json())
-      .then(() => loadCalendarEvents())
+      .then(() => {
+        closeEventModal();
+        loadCalendarEvents();
+      })
       .catch(err => console.warn("Could not create event:", err));
   };
 
