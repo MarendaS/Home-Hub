@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Home Hub</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -309,12 +310,18 @@
 
     <!-- CALENDAR -->
     <div class="card">
-      <div class="card-head"><h2>Calendar</h2><span class="tag">This Week</span></div>
-      <div class="card-body">
+      <div class="card-head">
+        <h2>Calendar</h2>
+        <button class="tag" id="cal-signin-btn" style="border:none;cursor:pointer;" onclick="signInGoogle()">Sign in</button>
+      </div>
+      <div class="card-body" id="cal-body">
         <div class="cal-item"><span class="cal-time">9:00a</span><span>Client call — CB Pinestraw</span></div>
         <div class="cal-item"><span class="cal-time">12:30p</span><span>Lunch — Sarah</span></div>
         <div class="cal-item"><span class="cal-time">3:00p</span><span>Gym — mobility session</span></div>
         <div class="cal-item"><span class="cal-time">Thu</span><span>Website draft due</span></div>
+      </div>
+      <div style="margin-top:8px; flex-shrink:0;">
+        <span class="recipe-chip" id="cal-add-btn" onclick="addCalendarEvent()" style="cursor:pointer; display:none;">+ Add event</span>
       </div>
     </div>
 
@@ -472,6 +479,113 @@
 
   loadMeals();
   setInterval(loadMeals, 30 * 60 * 1000); // refresh every 30 min
+
+  // ---- Google Calendar two-way sync ----
+  const GOOGLE_CLIENT_ID = "773299217986-g2n2oq49v99currf80ag0ks7bmbt41rq.apps.googleusercontent.com";
+  const CAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+  let googleAccessToken = null;
+  let tokenClient = null;
+
+  function initGoogleAuth() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: CAL_SCOPE,
+      callback: (response) => {
+        if (response.error) {
+          console.warn("Google auth error:", response.error);
+          return;
+        }
+        googleAccessToken = response.access_token;
+        // token lasts ~1hr; try a silent refresh before it expires
+        setTimeout(() => tokenClient.requestAccessToken({ prompt: "" }), 50 * 60 * 1000);
+        document.getElementById('cal-signin-btn').textContent = "Synced";
+        document.getElementById('cal-add-btn').style.display = "inline-block";
+        loadCalendarEvents();
+      },
+    });
+  }
+
+  window.signInGoogle = function() {
+    if (!tokenClient) { console.warn("Google auth not ready yet"); return; }
+    tokenClient.requestAccessToken({ prompt: googleAccessToken ? "" : "consent" });
+  };
+
+  function loadCalendarEvents() {
+    if (!googleAccessToken) return;
+    const now = new Date();
+    const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const params = new URLSearchParams({
+      timeMin: now.toISOString(),
+      timeMax: weekOut.toISOString(),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "12",
+    });
+    fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
+      headers: { Authorization: `Bearer ${googleAccessToken}` },
+    })
+      .then(res => res.json())
+      .then(data => renderCalendarEvents(data.items || []))
+      .catch(err => console.warn("Could not load calendar events:", err));
+  }
+
+  function formatEventTime(ev) {
+    if (ev.start.dateTime) {
+      const d = new Date(ev.start.dateTime);
+      let h = d.getHours(); const m = d.getMinutes().toString().padStart(2, "0");
+      const ampm = h >= 12 ? "p" : "a"; h = h % 12; if (h === 0) h = 12;
+      return `${h}:${m}${ampm}`;
+    }
+    // all-day event
+    return new Date(ev.start.date).toLocaleDateString("en-US", { weekday: "short" });
+  }
+
+  function renderCalendarEvents(events) {
+    const body = document.getElementById('cal-body');
+    if (events.length === 0) {
+      body.innerHTML = `<div class="cal-item"><span>No upcoming events</span></div>`;
+      return;
+    }
+    body.innerHTML = events.map(ev => `
+      <div class="cal-item">
+        <span class="cal-time">${formatEventTime(ev)}</span>
+        <span>${ev.summary || "(untitled)"}</span>
+      </div>
+    `).join("");
+  }
+
+  window.addCalendarEvent = function() {
+    if (!googleAccessToken) return;
+    const title = prompt("Event title:");
+    if (!title) return;
+    const dateStr = prompt("Date & time (e.g. 2026-09-02 3:00 PM):");
+    if (!dateStr) return;
+    const start = new Date(dateStr);
+    if (isNaN(start)) { alert("Couldn't understand that date/time — try again."); return; }
+    const end = new Date(start.getTime() + 60 * 60 * 1000); // default 1hr
+
+    fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${googleAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: title,
+        start: { dateTime: start.toISOString() },
+        end: { dateTime: end.toISOString() },
+      }),
+    })
+      .then(res => res.json())
+      .then(() => loadCalendarEvents())
+      .catch(err => console.warn("Could not create event:", err));
+  };
+
+  // Wait for Google Identity Services script to load before initializing
+  window.addEventListener("load", () => {
+    if (window.google && google.accounts) initGoogleAuth();
+    else setTimeout(initGoogleAuth, 500);
+  });
 </script>
 
 </body>
