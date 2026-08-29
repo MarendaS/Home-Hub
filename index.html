@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Home Hub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #23262B;
+    --bg-soft: #2B2F36;
+    --card: #F3EDE0;
+    --card-dim: #E7E0CF;
+    --ink: #23262B;
+    --ink-soft: #5A5548;
+    --paper: #F2EFE9;
+    --teal: #5C7A8A;
+    --teal-dark: #40606F;
+    --mustard: #D8A13A;
+    --mustard-dark: #B9832A;
+    --sage: #8FA88A;
+    --line: rgba(35,38,43,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.03) 0%, transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.02) 0%, transparent 40%);
+  }
+
+  .hub {
+    height: 100vh;
+    width: 100vw;
+    padding: 22px 26px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 16px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+  .header .brand {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header .brand .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--mustard);
+    display: inline-block;
+  }
+  .header .clock {
+    text-align: right;
+  }
+  .header .clock .time {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .header .clock .date {
+    font-size: 13px;
+    color: #B7BCC4;
+    margin-top: 3px;
+    letter-spacing: 0.3px;
+  }
+
+  /* GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 18px 20px;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+  .card-head h2 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .card-head .tag {
+    font-size: 11px;
+    background: var(--teal);
+    color: var(--paper);
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+
+  .card-body {
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .card-body::-webkit-scrollbar { width: 5px; }
+  .card-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+  /* WEEK PLAN — signature card */
+  .week-card {
+    grid-column: 1 / 5;
+    background: linear-gradient(160deg, var(--card) 0%, var(--card-dim) 100%);
+    border: 2px solid var(--mustard);
+  }
+  .week-card .card-head h2 { color: var(--mustard-dark); }
+
+  .week-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 12.5px;
+  }
+  .week-table th {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink-soft);
+    text-align: left;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .week-table th.today-col {
+    color: var(--mustard-dark);
+  }
+  .week-table td {
+    padding: 6px 6px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--line);
+  }
+  .week-table td.today-col {
+    background: rgba(216, 161, 58, 0.12);
+  }
+  .week-table .row-label {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--teal-dark);
+    white-space: nowrap;
+    width: 62px;
+  }
+  .meal-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    line-height: 1.25;
+  }
+  .meal-cell .name { flex: 1; }
+  .swap-btn {
+    background: var(--teal);
+    color: var(--paper);
+    border: none;
+    border-radius: 50%;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.9;
+  }
+  .swap-btn:active { transform: scale(0.9); }
+  .swap-btn.hidden { visibility: hidden; }
+  .meal-cell .swap-btn {
+    width: 18px; height: 18px;
+    font-size: 10px;
+    line-height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* CALENDAR */
+  .cal-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 7px 0; border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .cal-item:last-child { border-bottom: none; }
+  .cal-time {
+    font-weight: 700; color: var(--teal-dark);
+    width: 56px; flex-shrink: 0; font-size: 12.5px;
+  }
+
+  /* TASKS / GROCERY / REMINDERS lists */
+  ul.plain { list-style: none; }
+  ul.plain li {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 0; font-size: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  ul.plain li:last-child { border-bottom: none; }
+  .check {
+    width: 15px; height: 15px; border-radius: 5px;
+    border: 2px solid var(--teal);
+    flex-shrink: 0;
+  }
+  .check.done { background: var(--sage); border-color: var(--sage); }
+  li.done-text { text-decoration: line-through; color: var(--ink-soft); }
+
+  /* Recipes */
+  .recipe-chip {
+    display: inline-block;
+    background: var(--teal);
+    color: var(--paper);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: 10px;
+    margin: 4px 6px 0 0;
+  }
+
+  .footer-hint {
+    position: absolute;
+    bottom: 6px; right: 26px;
+    font-size: 10.5px;
+    color: #6B7078;
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hub">
+  <div class="header">
+    <div class="brand"><span class="dot"></span>M. Scales Home Hub</div>
+    <div class="clock">
+      <div class="time" id="time">--:--</div>
+      <div class="date" id="date">Loading...</div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- WEEK MEAL PLAN -->
+    <div class="card week-card">
+      <div class="card-head">
+        <h2>This Week's Meals</h2>
+        <span class="tag" id="week-range-tag">Mon – Sun</span>
+      </div>
+      <div class="card-body" id="meals-body">
+        <!-- populated by loadMeals(); placeholder shown until sheet is configured -->
+        <table class="week-table">
+          <thead><tr><th class="row-label"></th><th>Mon</th><th>Tue</th><th class="today-col">Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="row-label">Breakfast</td>
+              <td>Oats</td><td>Yogurt bowl</td><td class="today-col">Eggs & toast</td><td>Smoothie</td><td>Oats</td><td>Pancakes</td><td>Avocado toast</td>
+            </tr>
+            <tr>
+              <td class="row-label">Lunch</td>
+              <td>Turkey wrap</td><td>Leftover fajitas</td><td class="today-col">Chicken salad</td><td>Soup & salad</td><td>Wrap</td><td>Grilled cheese</td><td>Leftovers</td>
+            </tr>
+            <tr>
+              <td class="row-label">Dinner</td>
+              <td>Fajitas</td><td>Salmon</td><td class="today-col">Turkey chili</td><td>Stir fry</td><td>Pizza night</td><td>Tacos</td><td>Roast chicken</td>
+            </tr>
+            <tr>
+              <td class="row-label">Snack</td>
+              <td>Yogurt</td><td>Fruit</td><td class="today-col">Nuts</td><td>Yogurt</td><td>Popcorn</td><td>Chips</td><td>Fruit</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px; flex-shrink:0;">
+        <span class="recipe-chip">📖 Tonight's recipe</span>
+        <span class="recipe-chip">🛒 Add missing to list</span>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="card">
+      <div class="card-head"><h2>Calendar</h2><span class="tag">This Week</span></div>
+      <div class="card-body">
+        <div class="cal-item"><span class="cal-time">9:00a</span><span>Client call — CB Pinestraw</span></div>
+        <div class="cal-item"><span class="cal-time">12:30p</span><span>Lunch — Sarah</span></div>
+        <div class="cal-item"><span class="cal-time">3:00p</span><span>Gym — mobility session</span></div>
+        <div class="cal-item"><span class="cal-time">Thu</span><span>Website draft due</span></div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="card">
+      <div class="card-head"><h2>Tasks</h2><span class="tag">4 open</span></div>
+      <div class="card-body">
+        <ul class="plain">
+          <li><span class="check"></span> Finish PMO audit outline</li>
+          <li><span class="check"></span> Send invoice — CB Pinestraw</li>
+          <li><span class="check done"></span> <span class="done-text">Book dentist appt</span></li>
+          <li><span class="check"></span> Prep Friday client deck</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- GROCERY LIST -->
+    <div class="card">
+      <div class="card-head"><h2>Grocery List</h2><span class="tag">6 items</span></div>
+      <div class="card-body">
+        <ul class="plain">
+          <li><span class="check"></span> Chicken thighs</li>
+          <li><span class="check"></span> Bell peppers</li>
+          <li><span class="check"></span> Greek yogurt</li>
+          <li><span class="check done"></span> <span class="done-text">Eggs</span></li>
+          <li><span class="check"></span> Tortillas</li>
+          <li><span class="check"></span> Honey</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- REMINDERS -->
+    <div class="card">
+      <div class="card-head"><h2>Reminders</h2><span class="tag">Today</span></div>
+      <div class="card-body">
+        <ul class="plain">
+          <li><span class="check"></span> Take chicken out to thaw</li>
+          <li><span class="check"></span> Water the plants</li>
+          <li><span class="check"></span> Charge the iPad tonight</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer-hint">Auto-refreshes • configure NutriSync sheet in dashboard-config.js</div>
+</div>
+
+<script>
+  // ---- Clock ----
+  function updateClock() {
+    const now = new Date();
+    const timeEl = document.getElementById('time');
+    const dateEl = document.getElementById('date');
+    let h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    timeEl.textContent = `${h}:${m} ${ampm}`;
+    dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+  updateClock();
+  setInterval(updateClock, 15000);
+
+  // ---- NutriSync meal plan (Google Sheet CSV) ----
+  // Paste your published CSV URL below (File > Share > Publish to web > CSV in Google Sheets).
+  // Sheet columns expected: Day, Meal Type, Meal Name, Recipe Link, Notes
+  const NUTRISYNC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSwYs5825FP53Zcf7uZbV_1fH4iIW60aClknt3u431Rt9qX75CRVgj7Ota6EGDfGGCMJw9G4FSODODV/pub?gid=780064994&single=true&output=csv";
+
+  function parseCSV(text) {
+    const lines = text.trim().split("\n").map(l => l.split(",").map(c => c.trim().replace(/^"|"$/g, "")));
+    const headers = lines.shift();
+    return lines.map(line => {
+      const row = {};
+      headers.forEach((h, i) => row[h] = line[i] || "");
+      return row;
+    });
+  }
+
+  // Groups rows by "Day|MealType" so multiple rows for the same slot
+  // (e.g. two "Wednesday|Dinner" rows) become swappable options.
+  // Only Lunch and Dinner get the swap control — breakfast/snack stay fixed.
+  const SWAPPABLE_TYPES = ["lunch", "dinner"];
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const DAY_ABBR = { Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat", Sunday: "Sun" };
+  const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"];
+
+  let weekGroups = {}; // { "Monday|Dinner": [row, row, ...] }
+
+  function slotKey(day, mealType) { return `${day}|${mealType}`; }
+  function storageKey(day, mealType) { return `hub-meal-choice:${day}:${mealType}`; }
+
+  function getChosenIndex(day, mealType, max) {
+    const saved = parseInt(localStorage.getItem(storageKey(day, mealType)), 10);
+    if (!isNaN(saved) && saved >= 0 && saved < max) return saved;
+    return 0;
+  }
+  function setChosenIndex(day, mealType, index) {
+    localStorage.setItem(storageKey(day, mealType), index);
+  }
+
+  function renderCell(day, mealType) {
+    const key = slotKey(day, mealType);
+    const options = weekGroups[key];
+    if (!options || options.length === 0) return "";
+    const swappable = SWAPPABLE_TYPES.includes(mealType.toLowerCase()) && options.length > 1;
+    const idx = getChosenIndex(day, mealType, options.length);
+    const r = options[idx];
+    return `
+      <span class="meal-cell">
+        <span class="name">${r["Meal Name"] || ""}</span>
+        ${swappable ? `<button class="swap-btn" onclick="swapMeal('${day}','${mealType}')" aria-label="Choose a different ${mealType} for ${day}">↻</button>` : ""}
+      </span>
+    `;
+  }
+
+  function renderWeekTable() {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const headerRow = `<tr><th class="row-label"></th>${DAYS.map(d => `<th class="${d === today ? "today-col" : ""}">${DAY_ABBR[d]}</th>`).join("")}</tr>`;
+    const bodyRows = MEAL_TYPES.map(mt => `
+      <tr>
+        <td class="row-label">${mt}</td>
+        ${DAYS.map(d => `<td class="${d === today ? "today-col" : ""}">${renderCell(d, mt)}</td>`).join("")}
+      </tr>
+    `).join("");
+    document.getElementById('meals-body').innerHTML = `<table class="week-table"><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table>`;
+  }
+
+  window.swapMeal = function(day, mealType) {
+    const options = weekGroups[slotKey(day, mealType)];
+    const current = getChosenIndex(day, mealType, options.length);
+    const next = (current + 1) % options.length;
+    setChosenIndex(day, mealType, next);
+    renderWeekTable();
+  };
+
+  function renderMeals(rows) {
+    if (rows.length === 0) return; // keep placeholder if sheet is empty
+    weekGroups = {};
+    rows.forEach(r => {
+      if (!r.Day || !r["Meal Type"]) return;
+      const key = slotKey(r.Day, r["Meal Type"]);
+      if (!weekGroups[key]) weekGroups[key] = [];
+      weekGroups[key].push(r);
+    });
+    renderWeekTable();
+  }
+
+  function loadMeals() {
+    if (!NUTRISYNC_CSV_URL) return; // no sheet configured yet, placeholders stay
+    fetch(NUTRISYNC_CSV_URL)
+      .then(res => res.text())
+      .then(text => renderMeals(parseCSV(text)))
+      .catch(err => console.warn("Could not load meal sheet:", err));
+  }
+
+  loadMeals();
+  setInterval(loadMeals, 30 * 60 * 1000); // refresh every 30 min
+</script>
+
+</body>
+</html>
