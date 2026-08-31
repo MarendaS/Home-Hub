@@ -9,19 +9,21 @@
   @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
   :root {
-    --bg: #23262B;
-    --bg-soft: #2B2F36;
-    --card: #F3EDE0;
-    --card-dim: #E7E0CF;
-    --ink: #23262B;
-    --ink-soft: #5A5548;
-    --paper: #F2EFE9;
-    --teal: #5C7A8A;
-    --teal-dark: #40606F;
-    --mustard: #D8A13A;
+    --bg: #F3ECDC;
+    --bg-soft: #ECE1C7;
+    --card: #FFFFFF;
+    --card-dim: #FBF2E1;
+    --ink: #3B2A22;
+    --ink-soft: #8A7360;
+    --paper: #FCF8EF;
+    --teal: #3F8481;
+    --teal-dark: #2C625F;
+    --mustard: #E0A63C;
     --mustard-dark: #B9832A;
-    --sage: #8FA88A;
-    --line: rgba(35,38,43,0.12);
+    --rust: #C1592B;
+    --rust-dark: #9C4620;
+    --sage: #7C8B4A;
+    --line: rgba(59,42,34,0.13);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,15 +31,15 @@
   html, body {
     height: 100%;
     background: var(--bg);
-    color: var(--paper);
+    color: var(--ink);
     font-family: 'Inter', sans-serif;
     overflow: hidden;
   }
 
   body {
     background-image:
-      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.03) 0%, transparent 40%),
-      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.02) 0%, transparent 40%);
+      radial-gradient(circle at 15% 10%, rgba(193,89,43,0.05) 0%, transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(63,132,129,0.05) 0%, transparent 40%);
   }
 
   .hub {
@@ -61,14 +63,14 @@
     font-weight: 600;
     font-size: 22px;
     letter-spacing: 0.5px;
-    color: var(--paper);
+    color: var(--ink);
     display: flex;
     align-items: center;
     gap: 10px;
   }
   .header .brand .dot {
     width: 9px; height: 9px; border-radius: 50%;
-    background: var(--mustard);
+    background: var(--rust);
     display: inline-block;
   }
   .header .clock {
@@ -82,7 +84,7 @@
   }
   .header .clock .date {
     font-size: 13px;
-    color: #B7BCC4;
+    color: var(--ink-soft);
     margin-top: 3px;
     letter-spacing: 0.3px;
   }
@@ -104,8 +106,12 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+    box-shadow: 0 6px 16px rgba(59,42,34,0.10);
+    border-top: 4px solid transparent;
   }
+  /* MCM color-blocked accent stripes, one per card */
+  .grid > .card:nth-of-type(3) { border-top-color: var(--rust); }
+  .grid > .card:nth-of-type(4) { border-top-color: var(--sage); }
 
   .card-head {
     display: flex;
@@ -292,6 +298,44 @@
     color: var(--ink-soft);
   }
 
+  /* CALENDAR — merged with Reminders, spans 2 columns for room */
+  .calendar-card { grid-column: span 2; border-top-color: var(--teal); }
+  .cal-week-table th { padding-bottom: 6px; }
+  .cal-week-table td {
+    vertical-align: top;
+    padding: 6px 5px;
+    font-size: 11px;
+  }
+  .cal-day-event {
+    background: rgba(63,132,129,0.12);
+    border-radius: 6px;
+    padding: 4px 5px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .cal-day-event .ev-time {
+    display: block;
+    font-weight: 700;
+    color: var(--teal-dark);
+    font-size: 10px;
+  }
+  .cal-day-event .ev-title {
+    display: block;
+    font-size: 11.5px;
+  }
+  .cal-day-empty { color: var(--ink-soft); font-size: 10.5px; opacity: 0.6; }
+
+  .card-subsection {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  #reminders-body {
+    max-height: 90px;
+    overflow-y: auto;
+  }
+
   /* Recipes */
   .recipe-chip {
     display: inline-block;
@@ -308,7 +352,7 @@
     position: absolute;
     bottom: 6px; right: 26px;
     font-size: 10.5px;
-    color: #6B7078;
+    color: var(--ink-soft);
     letter-spacing: 0.3px;
   }
 
@@ -383,6 +427,11 @@
     background: var(--teal);
     color: var(--paper);
   }
+  .modal-btn.confirm:disabled {
+    background: var(--card-dim);
+    color: var(--ink-soft);
+    cursor: not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -429,25 +478,36 @@
         </table>
       </div>
       <div style="margin-top:8px; flex-shrink:0;">
-        <span class="recipe-chip">📖 Tonight's recipe</span>
-        <span class="recipe-chip">🛒 Add missing to list</span>
+        <span class="recipe-chip" onclick="openRecipeModal()" style="cursor:pointer;">📖 Tonight's recipe</span>
+        <span class="recipe-chip" onclick="openSubModal()" style="cursor:pointer;">🔄 Ingredient swap</span>
+        <span class="recipe-chip" onclick="openGenRecipeModal()" style="cursor:pointer;">✨ Generate recipe</span>
       </div>
     </div>
 
-    <!-- CALENDAR -->
-    <div class="card">
+    <!-- CALENDAR + REMINDERS -->
+    <div class="card calendar-card">
       <div class="card-head">
         <h2>Calendar</h2>
         <button class="tag" id="cal-signin-btn" style="border:none;cursor:pointer;" onclick="signInGoogle()">Sign in</button>
       </div>
       <div class="card-body" id="cal-body">
-        <div class="cal-item"><span class="cal-time">9:00a</span><span>Client call — CB Pinestraw</span></div>
-        <div class="cal-item"><span class="cal-time">12:30p</span><span>Lunch — Sarah</span></div>
-        <div class="cal-item"><span class="cal-time">3:00p</span><span>Gym — mobility session</span></div>
-        <div class="cal-item"><span class="cal-time">Thu</span><span>Website draft due</span></div>
+        <table class="week-table cal-week-table">
+          <thead><tr><th>Mon</th><th>Tue</th><th class="today-col">Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+          <tbody><tr>
+            <td></td><td></td><td class="today-col"></td><td></td><td></td><td></td><td></td>
+          </tr></tbody>
+        </table>
       </div>
-      <div style="margin-top:8px; flex-shrink:0;">
+      <div style="margin:8px 0; flex-shrink:0;">
         <span class="recipe-chip" id="cal-add-btn" onclick="openEventModal()" style="cursor:pointer; display:none;">+ Add event</span>
+      </div>
+      <div class="card-subsection">
+        <div class="card-head" style="margin-bottom:6px;"><h2>Reminders</h2><span class="tag" id="reminders-count-tag">0</span></div>
+        <div id="reminders-body"></div>
+        <div class="add-row">
+          <input type="text" id="reminders-add-input" placeholder="Add a reminder…" onkeydown="if(event.key==='Enter') addListItem('reminders')">
+          <button class="add-btn" onclick="addListItem('reminders')">+</button>
+        </div>
       </div>
     </div>
 
@@ -467,16 +527,6 @@
       <div class="card-body" id="shopping-body"></div>
     </div>
 
-    <!-- REMINDERS -->
-    <div class="card">
-      <div class="card-head"><h2>Reminders</h2><span class="tag" id="reminders-count-tag">0</span></div>
-      <div class="card-body" id="reminders-body"></div>
-      <div class="add-row">
-        <input type="text" id="reminders-add-input" placeholder="Add a reminder…" onkeydown="if(event.key==='Enter') addListItem('reminders')">
-        <button class="add-btn" onclick="addListItem('reminders')">+</button>
-      </div>
-    </div>
-
   </div>
   <div class="footer-hint">Auto-refreshes • configure NutriSync sheet in dashboard-config.js</div>
 </div>
@@ -494,6 +544,58 @@
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeEventModal()">Cancel</button>
       <button class="modal-btn confirm" onclick="submitCalendarEvent()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- TONIGHT'S RECIPE MODAL -->
+<div class="modal-overlay" id="recipe-modal-overlay">
+  <div class="modal-box">
+    <h3>Tonight's Recipe</h3>
+    <div id="recipe-modal-body" style="font-size:14px; line-height:1.5; margin-top:6px;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeRecipeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- INGREDIENT SUBSTITUTION MODAL -->
+<div class="modal-overlay" id="sub-modal-overlay">
+  <div class="modal-box">
+    <h3>Ingredient Swap</h3>
+    <p id="sub-modal-recipe-context" style="font-size:12.5px; color:var(--ink-soft); margin-bottom:8px;"></p>
+    <label>What are you out of?</label>
+    <input type="text" id="sub-ingredient-input" placeholder="e.g. buttermilk">
+    <div id="sub-result" style="font-size:14px; line-height:1.5; margin-top:12px;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeSubModal()">Close</button>
+      <button class="modal-btn confirm" onclick="submitSubstitution()">Get swap</button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERATE RECIPE MODAL -->
+<div class="modal-overlay" id="genrecipe-modal-overlay">
+  <div class="modal-box">
+    <h3>Generate Recipe</h3>
+    <label>Day</label>
+    <select id="genrecipe-day-input">
+      <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+      <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+    </select>
+    <label>Meal Type</label>
+    <select id="genrecipe-mealtype-input">
+      <option>Breakfast</option><option>Lunch</option><option selected>Dinner</option><option>Snack</option>
+    </select>
+    <label>Preferences / ingredients on hand (optional)</label>
+    <input type="text" id="genrecipe-pref-input" placeholder="e.g. quick, uses chicken thighs">
+    <div id="genrecipe-result" style="margin-top:12px; font-size:14px; line-height:1.5;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeGenRecipeModal()">Close</button>
+      <button class="modal-btn confirm" onclick="generateRecipe()">Generate</button>
+    </div>
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="modal-btn confirm" id="genrecipe-add-btn" onclick="addGeneratedRecipeToSheet()" disabled style="width:100%; opacity:0.5;">Add to my meal plan Sheet</button>
     </div>
   </div>
 </div>
@@ -584,6 +686,153 @@
     const next = (current + 1) % options.length;
     setChosenIndex(day, mealType, next);
     renderWeekTable();
+  };
+
+  // Returns today's currently-selected row for a given meal type (respecting any swap choice made)
+  function getTodayMealRow(mealType) {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const options = weekGroups[slotKey(today, mealType)];
+    if (!options || options.length === 0) return null;
+    const idx = getChosenIndex(today, mealType, options.length);
+    return options[idx];
+  }
+
+  // ---- Tonight's Recipe modal ----
+  window.openRecipeModal = function() {
+    const row = getTodayMealRow('Dinner');
+    const body = document.getElementById('recipe-modal-body');
+    if (!row) {
+      body.innerHTML = `<p>No dinner set for today in the meal plan sheet.</p>`;
+    } else {
+      let html = `<strong>${row["Meal Name"] || "Tonight's dinner"}</strong>`;
+      if (row["Notes"]) html += `<p style="margin-top:6px; color:var(--ink-soft); font-size:13px;">${row["Notes"]}</p>`;
+      if (row["Recipe Link"]) {
+        html += `<p style="margin-top:10px;"><a href="${row["Recipe Link"]}" target="_blank" style="color:var(--teal-dark); font-weight:600;">Open full recipe →</a></p>`;
+      } else {
+        html += `<p style="margin-top:10px; font-size:12.5px; color:var(--ink-soft); font-style:italic;">No recipe link saved yet — add one in the "Recipe Link" column of your meal plan Sheet.</p>`;
+      }
+      body.innerHTML = html;
+    }
+    document.getElementById('recipe-modal-overlay').classList.add('open');
+  };
+  window.closeRecipeModal = function() {
+    document.getElementById('recipe-modal-overlay').classList.remove('open');
+  };
+
+  // ---- Ingredient Swap modal (calls Claude directly) ----
+  window.openSubModal = function() {
+    const row = getTodayMealRow('Dinner');
+    document.getElementById('sub-modal-recipe-context').textContent = row
+      ? `For tonight's ${row["Meal Name"]}`
+      : "No dinner set for today — you can still ask for a general swap.";
+    document.getElementById('sub-ingredient-input').value = "";
+    document.getElementById('sub-result').innerHTML = "";
+    document.getElementById('sub-modal-overlay').classList.add('open');
+  };
+  window.closeSubModal = function() {
+    document.getElementById('sub-modal-overlay').classList.remove('open');
+  };
+
+  window.submitSubstitution = async function() {
+    const row = getTodayMealRow('Dinner');
+    const recipeName = row ? row["Meal Name"] : "tonight's dinner";
+    const missing = document.getElementById('sub-ingredient-input').value.trim();
+    if (!missing) return;
+    const resultEl = document.getElementById('sub-result');
+    resultEl.innerHTML = `<em>Thinking…</em>`;
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 300,
+          messages: [{
+            role: "user",
+            content: `I'm cooking "${recipeName}" tonight and I'm out of ${missing}. What's the best substitute I likely already have at home, and any quick adjustment to quantity or technique? Keep it to 2-3 short sentences.`
+          }],
+        }),
+      });
+      const data = await response.json();
+      const text = (data.content || []).filter(c => c.type === "text").map(c => c.text).join("\n");
+      resultEl.innerHTML = text || "Couldn't get a suggestion — try again.";
+    } catch (err) {
+      resultEl.innerHTML = "Something went wrong getting a suggestion — try again.";
+      console.warn("Substitution error:", err);
+    }
+  };
+
+  // ---- Generate Recipe modal (Claude generates, then writes to the Sheet on confirm) ----
+  let lastGeneratedRecipe = null;
+
+  window.openGenRecipeModal = function() {
+    document.getElementById('genrecipe-pref-input').value = "";
+    document.getElementById('genrecipe-result').innerHTML = "";
+    lastGeneratedRecipe = null;
+    const addBtn = document.getElementById('genrecipe-add-btn');
+    addBtn.disabled = true;
+    addBtn.style.opacity = "0.5";
+    document.getElementById('genrecipe-modal-overlay').classList.add('open');
+  };
+  window.closeGenRecipeModal = function() {
+    document.getElementById('genrecipe-modal-overlay').classList.remove('open');
+  };
+
+  window.generateRecipe = async function() {
+    const day = document.getElementById('genrecipe-day-input').value;
+    const mealType = document.getElementById('genrecipe-mealtype-input').value;
+    const pref = document.getElementById('genrecipe-pref-input').value.trim();
+    const resultEl = document.getElementById('genrecipe-result');
+    resultEl.innerHTML = `<em>Generating…</em>`;
+    try {
+      const promptText = `Generate one ${mealType.toLowerCase()} recipe idea${pref ? " with these preferences/ingredients: " + pref : ""}. Respond in exactly this format with no extra text before or after:\nTITLE: <short recipe name>\nNOTES: <2-3 sentence description of the dish and a brief hint at prep, under 40 words>`;
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 200,
+          messages: [{ role: "user", content: promptText }],
+        }),
+      });
+      const data = await response.json();
+      const text = (data.content || []).filter(c => c.type === "text").map(c => c.text).join("\n");
+      const titleMatch = text.match(/TITLE:\s*(.+)/i);
+      const notesMatch = text.match(/NOTES:\s*([\s\S]+)/i);
+      const name = titleMatch ? titleMatch[1].trim() : "Generated recipe";
+      const notes = notesMatch ? notesMatch[1].trim() : text.trim();
+      lastGeneratedRecipe = { day, mealType, name, notes };
+      resultEl.innerHTML = `<strong>${name}</strong><p style="margin-top:6px; color:var(--ink-soft); font-size:13px;">${notes}</p>`;
+      const addBtn = document.getElementById('genrecipe-add-btn');
+      addBtn.disabled = false;
+      addBtn.style.opacity = "1";
+    } catch (err) {
+      resultEl.innerHTML = "Something went wrong generating a recipe — try again.";
+      console.warn("Recipe generation error:", err);
+    }
+  };
+
+  window.addGeneratedRecipeToSheet = async function() {
+    if (!lastGeneratedRecipe || !googleAccessToken) return;
+    const { day, mealType, name, notes } = lastGeneratedRecipe;
+    const range = `${MEAL_SHEET_TAB}!A:E`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${MEAL_SPREADSHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { ...authHeader(), "Content-Type": "application/json" },
+        body: JSON.stringify({ values: [[day, mealType, name, "", notes]] }),
+      });
+      if (!res.ok) throw new Error("Sheets API returned " + res.status);
+      const resultEl = document.getElementById('genrecipe-result');
+      resultEl.innerHTML += `<p style="margin-top:8px; color:var(--sage); font-weight:600;">✅ Added to your meal plan Sheet — it may take a few minutes to show up in the week grid above.</p>`;
+      const addBtn = document.getElementById('genrecipe-add-btn');
+      addBtn.disabled = true;
+      addBtn.style.opacity = "0.5";
+    } catch (err) {
+      alert("Couldn't write to the Sheet — try again.");
+      console.warn("Sheet write error:", err);
+    }
   };
 
   function renderMeals(rows) {
@@ -770,7 +1019,9 @@
 
   // ---- Google Calendar + Tasks two-way sync ----
   const GOOGLE_CLIENT_ID = "773299217986-g2n2oq49v99currf80ag0ks7bmbt41rq.apps.googleusercontent.com";
-  const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks";
+  const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/spreadsheets";
+  const MEAL_SPREADSHEET_ID = "1gJi-HD1mKMRO63tPirRugoqn9vBnj2Bw9PxO5X6hU0Y";
+  const MEAL_SHEET_TAB = "Meals";
   let googleAccessToken = null;
   let tokenClient = null;
 
@@ -800,22 +1051,44 @@
     tokenClient.requestAccessToken({ prompt: googleAccessToken ? "" : "consent" });
   };
 
+  function getWeekDates() {
+    // Monday–Sunday of the current week, as local midnight Date objects
+    const now = new Date();
+    const dow = now.getDay(); // 0=Sun..6=Sat
+    const diffToMonday = (dow === 0 ? -6 : 1) - dow;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  }
+
+  function localDateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   function loadCalendarEvents() {
     if (!googleAccessToken) return;
-    const now = new Date();
-    const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekDates = getWeekDates();
+    const rangeStart = weekDates[0];
+    const rangeEnd = new Date(weekDates[6]);
+    rangeEnd.setDate(rangeEnd.getDate() + 1); // through end of Sunday
+
     const params = new URLSearchParams({
-      timeMin: now.toISOString(),
-      timeMax: weekOut.toISOString(),
+      timeMin: rangeStart.toISOString(),
+      timeMax: rangeEnd.toISOString(),
       singleEvents: "true",
       orderBy: "startTime",
-      maxResults: "12",
+      maxResults: "50",
     });
     fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
       headers: { Authorization: `Bearer ${googleAccessToken}` },
     })
       .then(res => res.json())
-      .then(data => renderCalendarEvents(data.items || []))
+      .then(data => renderCalendarWeek(data.items || [], weekDates))
       .catch(err => console.warn("Could not load calendar events:", err));
   }
 
@@ -826,22 +1099,48 @@
       const ampm = h >= 12 ? "p" : "a"; h = h % 12; if (h === 0) h = 12;
       return `${h}:${m}${ampm}`;
     }
-    // all-day event
-    return new Date(ev.start.date).toLocaleDateString("en-US", { weekday: "short" });
+    return "All day";
   }
 
-  function renderCalendarEvents(events) {
-    const body = document.getElementById('cal-body');
-    if (events.length === 0) {
-      body.innerHTML = `<div class="cal-item"><span>No upcoming events</span></div>`;
-      return;
-    }
-    body.innerHTML = events.map(ev => `
-      <div class="cal-item">
-        <span class="cal-time">${formatEventTime(ev)}</span>
-        <span>${ev.summary || "(untitled)"}</span>
-      </div>
-    `).join("");
+  function renderCalendarWeek(events, weekDates) {
+    const today = new Date();
+    const todayKey = localDateKey(today);
+
+    // bucket events by local date key
+    const byDay = {};
+    weekDates.forEach(d => { byDay[localDateKey(d)] = []; });
+    events.forEach(ev => {
+      const start = ev.start.dateTime ? new Date(ev.start.dateTime) : new Date(ev.start.date + "T00:00:00");
+      const key = localDateKey(start);
+      if (byDay[key]) byDay[key].push(ev);
+    });
+
+    const headerRow = `<tr>${weekDates.map(d => {
+      const isToday = localDateKey(d) === todayKey;
+      const label = d.toLocaleDateString("en-US", { weekday: "short" });
+      return `<th class="${isToday ? "today-col" : ""}">${label}</th>`;
+    }).join("")}</tr>`;
+
+    const bodyRow = `<tr>${weekDates.map(d => {
+      const isToday = localDateKey(d) === todayKey;
+      const dayEvents = byDay[localDateKey(d)] || [];
+      const cellContent = dayEvents.length === 0
+        ? `<span class="cal-day-empty">—</span>`
+        : dayEvents.map(ev => `
+            <div class="cal-day-event">
+              <span class="ev-time">${formatEventTime(ev)}</span>
+              <span class="ev-title">${ev.summary || "(untitled)"}</span>
+            </div>
+          `).join("");
+      return `<td class="${isToday ? "today-col" : ""}">${cellContent}</td>`;
+    }).join("")}</tr>`;
+
+    document.getElementById('cal-body').innerHTML = `
+      <table class="week-table cal-week-table">
+        <thead>${headerRow}</thead>
+        <tbody>${bodyRow}</tbody>
+      </table>
+    `;
   }
 
   window.openEventModal = function() {
