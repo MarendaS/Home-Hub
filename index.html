@@ -191,6 +191,13 @@
   .focus-item .due { font-size: 12px; color: var(--ink-soft); flex-shrink: 0; margin-left: auto; }
   .focus-item .due.late { color: var(--rust); font-weight: 600; }
 
+  .connect-btn {
+    margin-top: 8px; border: none; cursor: pointer; align-self: flex-start;
+    background: var(--teal); color: var(--paper);
+    font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+    padding: 9px 16px; border-radius: 10px;
+  }
+
   /* WEATHER (header) */
   .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .weather { display: flex; align-items: center; gap: 12px; text-align: right; }
@@ -467,10 +474,25 @@
     }
   })();
 
+  // Home Screen apps on iPad keep separate storage from Safari, so the link can also be pasted here.
+  window.connectAsana = function () {
+    const pasted = (prompt("Paste your Asana bridge link (the one ending in /exec):") || "").trim();
+    if (!pasted) return;
+    let url = pasted;
+    const m = pasted.match(/[?&]asana=([^&\s]+)/);
+    if (m) url = decodeURIComponent(m[1]);
+    if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)) {
+      alert("That doesn't look like the bridge link. It should start with https://script.google.com and end with /exec.");
+      return;
+    }
+    store(BRIDGE_KEY, url);
+    loadFocus();
+  };
+
   async function loadFocus() {
     const body = document.getElementById("focus-body");
     const url = recall(BRIDGE_KEY);
-    if (!url) { body.innerHTML = `<div class="empty-hint">Asana isn't connected yet.</div>`; return; }
+    if (!url) { body.innerHTML = `<div class="empty-hint">Asana isn't connected yet.</div><button class="connect-btn" onclick="connectAsana()">Connect Asana</button>`; return; }
     try {
       const res = await fetch(url);
       const data = await res.json();
