@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Home Hub</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -161,8 +160,8 @@
     color: var(--mustard-dark); margin-top: 2px;
   }
 
-  .dinner {
-    flex: 1;
+  .focus {
+    flex: 1.15;
     min-width: 0;
     background: linear-gradient(160deg, var(--card) 0%, var(--card-dim) 100%);
     border: 2px solid var(--mustard);
@@ -170,24 +169,36 @@
     padding: 14px 18px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    align-self: flex-start;
+    min-height: 0;
   }
-  .dinner[hidden] { display: none; }
-  .dinner h2 {
+  .focus h2 {
     font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.4px; color: var(--mustard-dark);
+    margin-bottom: 6px; flex-shrink: 0;
   }
-  .dinner .meal { font-family: 'Fredoka', sans-serif; font-size: 24px; font-weight: 600; line-height: 1.2; }
-  .dinner .notes { font-size: 14px; color: var(--ink-soft); line-height: 1.35; }
-  .dinner .actions { display: flex; gap: 8px; margin-top: 4px; }
-  .chip {
-    border: none; cursor: pointer;
-    background: var(--teal); color: var(--paper);
-    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
-    padding: 8px 14px; border-radius: 10px;
+  .focus-body { overflow: auto; min-height: 0; }
+  .focus-group { margin-bottom: 8px; }
+  .focus-group:last-child { margin-bottom: 0; }
+  .focus-group h3 {
+    font-family: 'Fredoka', sans-serif; font-size: 12.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--teal-dark); margin-bottom: 2px;
   }
-  .chip.ghost { background: var(--card-dim); color: var(--teal-dark); }
+  .focus-item { font-size: 16px; line-height: 1.3; padding: 3px 0; display: flex; gap: 8px; align-items: baseline; }
+  .focus-item .badge {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+    color: var(--rust); flex-shrink: 0;
+  }
+  .focus-item .due { font-size: 12px; color: var(--ink-soft); flex-shrink: 0; margin-left: auto; }
+  .focus-item .due.late { color: var(--rust); font-weight: 600; }
+
+  /* WEATHER (header) */
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .weather { display: flex; align-items: center; gap: 12px; text-align: right; }
+  .weather[hidden] { display: none; }
+  .weather .icon { font-size: 38px; line-height: 1; }
+  .weather .temp { font-family: 'Fredoka', sans-serif; font-size: 34px; font-weight: 600; line-height: 1; }
+  .weather .meta { font-size: 14px; color: var(--ink-soft); margin-top: 3px; }
+  .weather .tip { font-size: 14px; font-weight: 700; color: var(--rust); }
 
   /* LOWER ROW */
   .lower {
@@ -318,7 +329,7 @@
   @media (orientation: portrait) {
     .hub { grid-template-rows: auto auto 1fr; }
     .today-card { flex-direction: column; max-height: none; }
-    .dinner { align-self: stretch; }
+    .focus { max-height: 30vh; }
     .lower { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); }
   }
 </style>
@@ -331,7 +342,17 @@
       <div class="time" id="time">--:--</div>
       <div class="date" id="date">Loading…</div>
     </div>
-    <button class="status off" id="status" onclick="reconnect()"><span class="dot"></span><span id="status-text">Tap to connect Google</span></button>
+    <div class="header-right">
+      <div class="weather" id="weather" hidden>
+        <div>
+          <div class="temp" id="wx-temp"></div>
+          <div class="meta" id="wx-meta"></div>
+          <div class="tip" id="wx-tip"></div>
+        </div>
+        <div class="icon" id="wx-icon"></div>
+      </div>
+      <button class="status off" id="status" onclick="reconnect()"><span class="dot"></span><span id="status-text">Tap to connect Google</span></button>
+    </div>
   </div>
 
   <!-- TODAY -->
@@ -340,14 +361,9 @@
       <div class="card-head"><h2>Today</h2><button class="tag" style="border:none;cursor:pointer;" id="add-event-btn" onclick="openEventModal()" hidden>+ Event</button></div>
       <div class="card-body" id="today-body"><div class="empty-hint">Connect Google to see today's plan.</div></div>
     </div>
-    <div class="dinner" id="dinner" hidden>
-      <h2>Tonight's dinner</h2>
-      <div class="meal" id="dinner-name"></div>
-      <div class="notes" id="dinner-notes"></div>
-      <div class="actions">
-        <button class="chip" onclick="openRecipeModal()">📖 Recipe</button>
-        <button class="chip ghost" id="dinner-swap" onclick="swapDinner()" hidden>↻ Other option</button>
-      </div>
+    <div class="focus" id="focus">
+      <h2>This week's focus</h2>
+      <div class="focus-body" id="focus-body"><div class="empty-hint">Loading from Asana…</div></div>
     </div>
   </div>
 
@@ -403,17 +419,6 @@
   </div>
 </div>
 
-<!-- RECIPE MODAL -->
-<div class="modal-overlay" id="recipe-modal">
-  <div class="modal-box">
-    <h3 id="recipe-title">Tonight's recipe</h3>
-    <div class="modal-scroll" id="recipe-body"></div>
-    <div class="modal-actions">
-      <button class="modal-btn cancel" onclick="closeModal('recipe-modal')">Close</button>
-    </div>
-  </div>
-</div>
-
 <script>
   // ---------- helpers ----------
   function esc(s) {
@@ -449,71 +454,94 @@
     setTimeout(() => location.reload(), next - now);
   })();
 
-  // ---------- tonight's dinner (NutriSync Google Sheet CSV) ----------
-  // Sheet columns expected: Day, Meal Type, Meal Name, Recipe Link, Notes
-  const NUTRISYNC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSwYs5825FP53Zcf7uZbV_1fH4iIW60aClknt3u431Rt9qX75CRVgj7Ota6EGDfGGCMJw9G4FSODODV/pub?gid=780064994&single=true&output=csv";
-  let dinnerOptions = [];
-
-  function todayName() { return new Date().toLocaleDateString("en-US", { weekday: "long" }); }
-  function dinnerKey() { return `hub-dinner-choice:${localDateKey(new Date())}`; }
-  function dinnerIndex() {
-    const i = parseInt(recall(dinnerKey()), 10);
-    return (!isNaN(i) && i >= 0 && i < dinnerOptions.length) ? i : 0;
-  }
-
-  function renderDinner() {
-    const box = document.getElementById("dinner");
-    if (dinnerOptions.length === 0) { box.hidden = true; return; }
-    const r = dinnerOptions[dinnerIndex()];
-    document.getElementById("dinner-name").textContent = r["Meal Name"] || "Dinner";
-    document.getElementById("dinner-notes").textContent = r["Notes"] || "";
-    document.getElementById("dinner-swap").hidden = dinnerOptions.length < 2;
-    box.hidden = false;
-  }
-
-  window.swapDinner = function () {
-    store(dinnerKey(), (dinnerIndex() + 1) % dinnerOptions.length);
-    renderDinner();
-  };
-
-  function loadMeals() {
-    if (!window.Papa) return;
-    Papa.parse(NUTRISYNC_CSV_URL, {
-      download: true, header: true, skipEmptyLines: true,
-      complete: res => {
-        const today = todayName().toLowerCase();
-        dinnerOptions = (res.data || []).filter(r =>
-          (r.Day || "").trim().toLowerCase() === today &&
-          (r["Meal Type"] || "").trim().toLowerCase() === "dinner" &&
-          (r["Meal Name"] || "").trim()
-        );
-        renderDinner();
-      },
-      error: err => console.warn("Could not load meal sheet:", err),
-    });
-  }
-  window.addEventListener("load", loadMeals);
-  setInterval(loadMeals, 30 * 60 * 1000);
-
-  window.openRecipeModal = function () {
-    const r = dinnerOptions[dinnerIndex()];
-    if (!r) return;
-    document.getElementById("recipe-title").textContent = r["Meal Name"] || "Tonight's recipe";
-    const body = document.getElementById("recipe-body");
-    const recipe = (r["Recipe Link"] || "").trim();
-    if (!recipe) {
-      body.innerHTML = `<em>No recipe saved for this meal yet.</em>`;
-    } else if (/^https?:\/\//i.test(recipe)) {
-      body.innerHTML = `<a href="${esc(recipe)}" target="_blank" rel="noopener" style="color:var(--teal-dark);font-weight:600;">Open full recipe →</a>`;
-    } else {
-      // Plain-text recipe from NutriSync: ingredients separated by semicolons, steps numbered.
-      const text = recipe
-        .replace(/;\s*/g, "\n• ")
-        .replace(/\s+(\d{1,2})[.)]\s+/g, "\n\n$1. ");
-      body.textContent = (text.startsWith("\n") ? "" : "• ") + text.trim();
+  // ---------- weekly focus (Asana, through the Apps Script bridge) ----------
+  // The bridge URL is kept only on this iPad, never in the public repo.
+  // One-time setup: open marendas.github.io/?asana=<your bridge /exec URL> on the iPad.
+  const BRIDGE_KEY = "hub-asana-bridge";
+  (function captureBridgeUrl() {
+    const params = new URLSearchParams(location.search);
+    const url = params.get("asana");
+    if (url && /^https:\/\/script\.google\.com\//.test(url)) {
+      store(BRIDGE_KEY, url);
+      history.replaceState(null, "", location.pathname);
     }
-    document.getElementById("recipe-modal").classList.add("open");
-  };
+  })();
+
+  async function loadFocus() {
+    const body = document.getElementById("focus-body");
+    const url = recall(BRIDGE_KEY);
+    if (!url) { body.innerHTML = `<div class="empty-hint">Asana isn't connected yet.</div>`; return; }
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderFocus(data.items || []);
+    } catch (e) {
+      console.warn("Could not load Asana focus:", e);
+      if (!body.querySelector(".focus-group")) body.innerHTML = `<div class="empty-hint">Couldn't reach Asana. Will try again shortly.</div>`;
+    }
+  }
+
+  function renderFocus(items) {
+    const body = document.getElementById("focus-body");
+    if (items.length === 0) { body.innerHTML = `<div class="empty-hint">Nothing in This Week or In Progress.</div>`; return; }
+    const todayKey = localDateKey(new Date());
+    const groups = {};
+    items.forEach(i => (groups[i.project] = groups[i.project] || []).push(i));
+    body.innerHTML = Object.entries(groups).map(([project, list]) => `
+      <div class="focus-group">
+        <h3>${esc(project)}</h3>
+        ${list.map(i => {
+          let due = "";
+          if (i.due_on) {
+            const d = new Date(i.due_on + "T12:00:00");
+            due = `<span class="due ${i.due_on < todayKey ? "late" : ""}">${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getMonth() + 1}/${d.getDate()}</span>`;
+          }
+          const badge = /progress/i.test(i.section) ? `<span class="badge">Doing</span>` : "";
+          return `<div class="focus-item">${badge}<span>${esc(i.name)}</span>${due}</div>`;
+        }).join("")}
+      </div>`).join("");
+  }
+
+  window.addEventListener("load", loadFocus);
+  setInterval(loadFocus, 10 * 60 * 1000);
+
+  // ---------- weather (Open-Meteo: free, no key, no sign-in) ----------
+  // Atlanta by default. To use your exact spot, change these two numbers.
+  const WX_LAT = 33.749, WX_LON = -84.388;
+  const WX_CODES = [
+    [[0], "☀️", "Clear"], [[1, 2], "🌤️", "Partly cloudy"], [[3], "☁️", "Cloudy"], [[45, 48], "🌫️", "Fog"],
+    [[51, 53, 55, 56, 57], "🌦️", "Drizzle"], [[61, 63, 65, 66, 67, 80, 81, 82], "🌧️", "Rain"],
+    [[71, 73, 75, 77, 85, 86], "🌨️", "Snow"], [[95, 96, 99], "⛈️", "Storms"],
+  ];
+  function wxLookup(code) { return WX_CODES.find(([codes]) => codes.includes(code)) || [null, "🌡️", ""]; }
+
+  async function loadWeather() {
+    const params = new URLSearchParams({
+      latitude: WX_LAT, longitude: WX_LON,
+      current: "temperature_2m,weather_code",
+      daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+      temperature_unit: "fahrenheit", timezone: "America/New_York", forecast_days: "1",
+    });
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+      const w = await res.json();
+      const [, icon, label] = wxLookup(w.current.weather_code);
+      const hi = Math.round(w.daily.temperature_2m_max[0]), lo = Math.round(w.daily.temperature_2m_min[0]);
+      const rain = w.daily.precipitation_probability_max[0] ?? 0;
+      let tip = "";
+      if (rain >= 40) tip = "Bring an umbrella";
+      else if (hi <= 45) tip = "Bundle up";
+      else if (hi <= 60 || lo <= 45) tip = "Jacket weather";
+      document.getElementById("wx-icon").textContent = icon;
+      document.getElementById("wx-temp").textContent = `${Math.round(w.current.temperature_2m)}°`;
+      document.getElementById("wx-meta").textContent = `${label} · H ${hi}° L ${lo}° · Rain ${rain}%`;
+      document.getElementById("wx-tip").textContent = tip;
+      document.getElementById("weather").hidden = false;
+    } catch (e) { console.warn("Could not load weather:", e); }
+  }
+  window.addEventListener("load", loadWeather);
+  setInterval(loadWeather, 30 * 60 * 1000);
 
   // ---------- Google sign-in (Calendar + Tasks) ----------
   const GOOGLE_CLIENT_ID = "773299217986-g2n2oq49v99currf80ag0ks7bmbt41rq.apps.googleusercontent.com";
