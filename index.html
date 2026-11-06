@@ -285,7 +285,19 @@
   }
   li.leaving .check { background: var(--sage); border-color: var(--sage); }
 
-  .sub { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .list-tabs {
+    display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0;
+    padding-bottom: 8px; margin-bottom: 4px; scrollbar-width: none;
+  }
+  .list-tabs::-webkit-scrollbar { display: none; }
+  .list-tabs button {
+    flex-shrink: 0; border: none; cursor: pointer; white-space: nowrap;
+    background: var(--card-dim); color: var(--ink-soft);
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+    padding: 7px 14px; border-radius: 17px;
+  }
+  .list-tabs button.on { background: var(--teal); color: var(--paper); }
+  .list-tabs button .n { opacity: 0.75; font-weight: 500; margin-left: 4px; }
   .add-row { display: flex; gap: 8px; margin-top: 8px; flex-shrink: 0; }
   .add-row input {
     flex: 1; padding: 10px 12px; border-radius: 10px;
@@ -387,23 +399,14 @@
       <div class="card-body" id="week-body"></div>
     </div>
 
-    <!-- TASKS + REMINDERS -->
+    <!-- GOOGLE TASKS (all lists, one at a time) -->
     <div class="card lists-card">
-      <div class="card-body">
-        <div class="card-head"><h2>Tasks</h2><span class="tag" id="tasks-count">0</span></div>
-        <div id="tasks-body"></div>
-        <div class="add-row">
-          <input type="text" id="tasks-add-input" placeholder="Add a task…" onkeydown="if(event.key==='Enter') addListItem('tasks')">
-          <button class="add-btn" onclick="addListItem('tasks')">+</button>
-        </div>
-        <div class="sub">
-          <div class="card-head"><h2>Reminders</h2><span class="tag" id="reminders-count">0</span></div>
-          <div id="reminders-body"></div>
-          <div class="add-row">
-            <input type="text" id="reminders-add-input" placeholder="Add a reminder…" onkeydown="if(event.key==='Enter') addListItem('reminders')">
-            <button class="add-btn" onclick="addListItem('reminders')">+</button>
-          </div>
-        </div>
+      <div class="card-head"><h2 id="list-title">Tasks</h2><span class="tag" id="list-count">0 open</span></div>
+      <div class="list-tabs" id="list-tabs" role="tablist" aria-label="Google Tasks lists"></div>
+      <div class="card-body" id="list-body"></div>
+      <div class="add-row">
+        <input type="text" id="list-add-input" placeholder="Add an item…" onkeydown="if(event.key==='Enter') addListItem()">
+        <button class="add-btn" onclick="addListItem()" aria-label="Add">+</button>
       </div>
     </div>
   </div>
@@ -805,71 +808,94 @@
     } catch (e) { console.warn("Could not create event:", e); }
   };
 
-  // ---------- tasks + reminders (Google Tasks) ----------
-  // Completed items are hidden here; they stay marked done in Google Tasks.
-  const TASK_LISTS = { tasks: "Home Hub — Tasks", reminders: "Home Hub — Reminders" };
-  let listIds = {};
+  // ---------- Google Tasks: every list, one at a time ----------
+  // Shows all your Google Tasks lists as tabs. Completed items are hidden here;
+  // they stay marked done in Google Tasks. The chosen tab is remembered on the iPad.
+  const LIST_PREFIX = /^Home Hub\s*[—–-]\s*/; // shortens "Home Hub — Tasks" to "Tasks"
+  let allLists = [];           // [{ id, title }]
+  let openCounts = {};         // listId -> number open
+  let currentListId = recall("hub-current-list");
 
-  async function ensureTaskLists() {
-    if (Object.keys(listIds).length === Object.keys(TASK_LISTS).length) return;
+  function listName(l) { return (l.title || "Untitled").replace(LIST_PREFIX, ""); }
+
+  async function loadAllLists() {
     const res = await gfetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=100");
-    const existing = (await res.json()).items || [];
-    for (const [key, title] of Object.entries(TASK_LISTS)) {
-      let match = existing.find(l => l.title === title);
-      if (!match) {
-        const c = await gfetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists", {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }),
-        });
-        match = await c.json();
-      }
-      listIds[key] = match.id;
+    allLists = ((await res.json()).items || []).map(l => ({ id: l.id, title: l.title }));
+    if (!allLists.some(l => l.id === currentListId)) {
+      const preferred = allLists.find(l => listName(l) === "Tasks") || allLists[0];
+      currentListId = preferred ? preferred.id : null;
     }
   }
 
-  async function fetchOpenTasks(key) {
-    const res = await gfetch(`https://tasks.googleapis.com/tasks/v1/lists/${listIds[key]}/tasks?showCompleted=false&showHidden=false&maxResults=100`);
+  async function fetchOpenTasks(listId) {
+    const res = await gfetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks?showCompleted=false&showHidden=false&maxResults=100`);
     const items = (await res.json()).items || [];
     return items
       .filter(t => t.status !== "completed" && (t.title || "").trim())
       .sort((a, b) => (a.position || "").localeCompare(b.position || ""));
   }
 
-  async function renderList(key) {
-    const items = await fetchOpenTasks(key);
-    const body = document.getElementById(`${key}-body`);
+  function renderTabs() {
+    document.getElementById("list-tabs").innerHTML = allLists.map(l => `
+      <button role="tab" aria-selected="${l.id === currentListId}" class="${l.id === currentListId ? "on" : ""}" onclick="selectList('${l.id}')">
+        ${esc(listName(l))}${openCounts[l.id] ? `<span class="n">${openCounts[l.id]}</span>` : ""}
+      </button>`).join("");
+  }
+
+  async function renderCurrentList() {
+    const body = document.getElementById("list-body");
+    const current = allLists.find(l => l.id === currentListId);
+    if (!current) { body.innerHTML = `<div class="empty-hint">No Google Tasks lists found.</div>`; return; }
+    document.getElementById("list-title").textContent = listName(current);
+    document.getElementById("list-add-input").placeholder = `Add to ${listName(current).toLowerCase()}…`;
+    const items = await fetchOpenTasks(current.id);
+    if (current.id !== currentListId) return; // tab changed while loading
+    openCounts[current.id] = items.length;
     body.innerHTML = items.length === 0
       ? `<div class="empty-hint">All clear.</div>`
-      : `<ul class="plain">${items.map(t => `<li onclick="completeItem(this,'${key}','${t.id}')"><span class="check"></span><span>${esc(t.title)}</span></li>`).join("")}</ul>`;
-    document.getElementById(`${key}-count`).textContent = `${items.length} open`;
+      : `<ul class="plain">${items.map(t => `<li onclick="completeItem(this,'${t.id}')"><span class="check"></span><span>${esc(t.title)}</span></li>`).join("")}</ul>`;
+    document.getElementById("list-count").textContent = `${items.length} open`;
+    renderTabs();
   }
 
   async function renderLists() {
-    await ensureTaskLists();
-    await Promise.all(Object.keys(TASK_LISTS).map(renderList));
+    await loadAllLists();
+    // Open counts for every tab, so you can see where things are waiting.
+    await Promise.all(allLists.map(async l => { openCounts[l.id] = (await fetchOpenTasks(l.id)).length; }));
+    renderTabs();
+    await renderCurrentList();
   }
 
-  window.completeItem = async function (li, key, id) {
+  window.selectList = function (id) {
+    currentListId = id;
+    store("hub-current-list", id);
+    renderTabs();
+    document.getElementById("list-body").innerHTML = `<div class="empty-hint">Loading…</div>`;
+    renderCurrentList().catch(e => console.warn("Could not load list:", e));
+  };
+
+  window.completeItem = async function (li, id) {
     if (li.classList.contains("leaving")) return;
     li.classList.add("leaving");
+    const listId = currentListId;
     try {
-      await gfetch(`https://tasks.googleapis.com/tasks/v1/lists/${listIds[key]}/tasks/${id}`, {
+      await gfetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "completed" }),
       });
     } catch (e) { li.classList.remove("leaving"); return; }
-    setTimeout(() => renderList(key), 300);
+    setTimeout(() => renderCurrentList(), 300);
   };
 
-  window.addListItem = async function (key) {
-    const input = document.getElementById(`${key}-add-input`);
+  window.addListItem = async function () {
+    const input = document.getElementById("list-add-input");
     const text = input.value.trim();
-    if (!text || !connected()) return;
+    if (!text || !connected() || !currentListId) return;
     input.value = "";
     try {
-      await ensureTaskLists();
-      await gfetch(`https://tasks.googleapis.com/tasks/v1/lists/${listIds[key]}/tasks`, {
+      await gfetch(`https://tasks.googleapis.com/tasks/v1/lists/${currentListId}/tasks`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: text }),
       });
-      renderList(key);
+      renderCurrentList();
     } catch (e) { input.value = text; }
   };
 
@@ -878,7 +904,7 @@
   setStatus();
   renderCalView();
   document.getElementById("week-body").innerHTML = `<div class="empty-hint">Connect Google to see the week.</div>`;
-  ["tasks", "reminders"].forEach(k => document.getElementById(`${k}-body`).innerHTML = `<div class="empty-hint">Connect Google to load this list.</div>`);
+  document.getElementById("list-body").innerHTML = `<div class="empty-hint">Connect Google to load your lists.</div>`;
   window.addEventListener("load", () => {
     initGoogleAuth();
     if (connected()) { scheduleSilentRefresh(); refreshAll(); }
